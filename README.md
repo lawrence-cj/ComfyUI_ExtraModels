@@ -46,12 +46,8 @@ Alternatively, use the manager, assuming it has an update function.
 - Compressed latent space (32 channels, /32 compression) - needs custom VAE
 
 ### Usage
-1. Download the model weights from the [Sana HF repo](https://huggingface.co/Efficient-Large-Model/Sana_1600M_1024px/tree/main/checkpoints) - the HF account has alternative models available too.
-2. Place them in your checkpoints folder
-3. Load them with the correct PixArt checkpoint loader
-4. Use the "Gemma Loader" node - it should automatically download the requested model from Huggingface - Recommended to use the 4bit quantized model on CPU when low on memory.
-5. Download the VAE from [here](https://huggingface.co/Efficient-Large-Model/dc_ae_f32c32_sana_1.0_diffusers/tree/main) and place it in your VAE folder after renaming it.
-6. Use either the "Empty Sana Latent Image" or "Empty DCAE Latent Image" node for the latent input when doing txt2img.
+1. All the checkpoints will be downloaded automatically;
+2. Flow Euler is available for now; Flow DPM-Solver will be available soon.
 
 [Sample workflow](https://github.com/user-attachments/files/18027854/SanaV1.json)
 
