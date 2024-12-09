@@ -5,6 +5,7 @@ from huggingface_hub import snapshot_download
 
 from .conf import sana_conf, sana_res
 from .loader import load_sana
+from nodes import EmptyLatentImage
 
 if not "sana" in folder_paths.folder_names_and_paths:
     folder_paths.add_model_folder_path("sana", os.path.join(folder_paths.models_dir, "Sana"))
