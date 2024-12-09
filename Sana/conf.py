@@ -7,14 +7,14 @@ sampling_settings = {
 }
 
 sana_conf = {
-	"SanaMS_600M_P1_D28": {
+    "SanaMS_1600M_P1_D20": {
 		"target": "SanaMS",
 		"unet_config": {
 			"in_channels": 32,
-			"depth": 28,
-			"hidden_size": 1152,
+			"depth": 20,
+			"hidden_size": 2240,
 			"patch_size": 1,
-			"num_heads": 16,
+			"num_heads": 20,
 			"linear_head_dim": 32,
 			"model_max_length": 300,
 			"y_norm": True,
@@ -29,14 +29,14 @@ sana_conf = {
 		},
 		"sampling_settings" : sampling_settings,
 	},
-	"SanaMS_1600M_P1_D20": {
+	"SanaMS_600M_P1_D28": {
 		"target": "SanaMS",
 		"unet_config": {
 			"in_channels": 32,
-			"depth": 20,
-			"hidden_size": 2240,
+			"depth": 28,
+			"hidden_size": 1152,
 			"patch_size": 1,
-			"num_heads": 20,
+			"num_heads": 16,
 			"linear_head_dim": 32,
 			"model_max_length": 300,
 			"y_norm": True,
