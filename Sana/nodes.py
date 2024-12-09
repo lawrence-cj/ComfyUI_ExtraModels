@@ -89,6 +89,15 @@ class SanaCheckpointLoader:
 		return (model,)
 
 
+class EmptySanaLatentImage(EmptyLatentImage):
+	CATEGORY = "ExtraModels/Sana"
+	TITLE = "Empty Sana Latent Image"
+
+	def generate(self, width, height, batch_size=1):
+		latent = torch.zeros([batch_size, 32, height // 32, width // 32], device=self.device)
+		return ({"samples":latent}, )
+
+
 class SanaResolutionSelect():
 	@classmethod
 	def INPUT_TYPES(s):
@@ -191,11 +200,5 @@ NODE_CLASS_MAPPINGS = {
 	"SanaResolutionSelect" : SanaResolutionSelect,
 	"SanaTextEncode" : SanaTextEncode,
 	"SanaResolutionCond" : SanaResolutionCond,
-}
-
-NODE_DISPLAY_NAME_MAPPINGS = {
-    "Sana Checkpoint Loader": "SanaCheckpointLoader",
-    "Sana Resolution Select": "SanaResolutionSelect",
-    "Sana Text Encoder": "SanaTextEncode",
-    "Sana Resolution Cond": "SanaResolutionCond",
+	"EmptySanaLatentImage": EmptySanaLatentImage,
 }
