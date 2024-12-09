@@ -1,10 +1,10 @@
 import os
 import torch
 import folder_paths
+from huggingface_hub import snapshot_download
 
 from .conf import sana_conf, sana_res
 from .loader import load_sana
-from huggingface_hub import snapshot_download
 
 if not "sana" in folder_paths.folder_names_and_paths:
     folder_paths.add_model_folder_path("sana", os.path.join(folder_paths.models_dir, "Sana"))
@@ -32,7 +32,7 @@ class SanaCheckpointLoader:
 						"Efficient-Large-Model/Sana_600M_512px",
 					] + folder_paths.get_filename_list("checkpoints"),
 				),
-				"model": (list(sana_conf.keys()),),
+				"model": (list(sana_conf.keys()), {"default":"SanaMS_1600M_P1_D20"}),
 			}
 		}
 	RETURN_TYPES = ("MODEL",)
@@ -42,40 +42,40 @@ class SanaCheckpointLoader:
 	TITLE = "Sana Checkpoint Loader"
 
 	def load_checkpoint(self, ckpt_name, model):
-		if ckpt_name == 'Efficient-Large-Model/Sana_1600M_1024px_MultiLing':
-			ckpt_path = os.path.join(folder_paths.models_dir, 'sana', 'models--sana--sana-1600m-1024px-multilingual')
+		if ckpt_name == "Efficient-Large-Model/Sana_1600M_1024px_MultiLing":
+			ckpt_path = os.path.join(folder_paths.models_dir, "sana", "models--sana--sana-1600m-1024px-multilingual")
 			model_conf = sana_conf['SanaMS_1600M_P1_D20']
-			if not os.path.exists(os.path.join(ckpt_path, 'checkpoints/Sana_1600M_1024px_MultiLing.pth')):
+			if not os.path.exists(os.path.join(ckpt_path, "checkpoints/Sana_1600M_1024px_MultiLing.pth")):
 				snapshot_download(ckpt_name, local_dir=ckpt_path)
 			ckpt_path = f"{ckpt_path}/checkpoints/Sana_1600M_1024px_MultiLing.pth"
-		elif ckpt_name == 'Efficient-Large-Model/Sana_1600M_512px_MultiLing':
-			ckpt_path = os.path.join(folder_paths.models_dir, 'sana', 'models--sana--sana-1600m-512px-multilingual')
+		elif ckpt_name == "Efficient-Large-Model/Sana_1600M_512px_MultiLing":
+			ckpt_path = os.path.join(folder_paths.models_dir, "sana", "models--sana--sana-1600m-512px-multilingual")
 			model_conf = sana_conf['SanaMS_1600M_P1_D20']
-			if not os.path.exists(os.path.join(ckpt_path, 'checkpoints/Sana_1600M_512px_MultiLing.pth')):
+			if not os.path.exists(os.path.join(ckpt_path, "checkpoints/Sana_1600M_512px_MultiLing.pth")):
 				snapshot_download(ckpt_name, local_dir=ckpt_path)
 			ckpt_path = f"{ckpt_path}/checkpoints/Sana_1600M_512px_MultiLing.pth"
-		elif ckpt_name == 'Efficient-Large-Model/Sana_1600M_1024px':
-			ckpt_path = os.path.join(folder_paths.models_dir, 'sana', 'models--sana--sana-1600m-1024px')
+		elif ckpt_name == "Efficient-Large-Model/Sana_1600M_1024px":
+			ckpt_path = os.path.join(folder_paths.models_dir, "sana", "models--sana--sana-1600m-1024px")
 			model_conf = sana_conf['SanaMS_1600M_P1_D20']
 			if not os.path.exists(os.path.join(ckpt_path, 'checkpoints/Sana_1600M_1024px.pth')):
 				snapshot_download(ckpt_name, local_dir=ckpt_path)
 			ckpt_path = f"{ckpt_path}/checkpoints/Sana_1600M_1024px.pth"
-		elif ckpt_name == 'Efficient-Large-Model/Sana_1600M_512px':
-			ckpt_path = os.path.join(folder_paths.models_dir, 'sana', 'models--sana--sana-1600m-512px')
-			model_conf = sana_conf['SanaMS_1600M_P1_D20']
-			if not os.path.exists(os.path.join(ckpt_path, 'checkpoints/Sana_1600M_512px.pth')):
+		elif ckpt_name == "Efficient-Large-Model/Sana_1600M_512px":
+			ckpt_path = os.path.join(folder_paths.models_dir, "sana", "models--sana--sana-1600m-512px")
+			model_conf = sana_conf["SanaMS_1600M_P1_D20"]
+			if not os.path.exists(os.path.join(ckpt_path, "checkpoints/Sana_1600M_512px.pth")):
 				snapshot_download(ckpt_name, local_dir=ckpt_path)
 			ckpt_path = f"{ckpt_path}/checkpoints/Sana_1600M_512px.pth"
-		elif ckpt_name == 'Efficient-Large-Model/Sana_600M_1024px':
-			ckpt_path = os.path.join(folder_paths.models_dir, 'sana', 'models--sana--sana-600m-1024px')
-			model_conf = sana_conf['SanaMS_600M_P1_D28']
-			if not os.path.exists(os.path.join(ckpt_path, 'checkpoints/Sana_600M_1024px.pth')):
+		elif ckpt_name == "Efficient-Large-Model/Sana_600M_1024px":
+			ckpt_path = os.path.join(folder_paths.models_dir, "sana", "models--sana--sana-600m-1024px")
+			model_conf = sana_conf["SanaMS_600M_P1_D28"]
+			if not os.path.exists(os.path.join(ckpt_path, "checkpoints/Sana_600M_1024px.pth")):
 				snapshot_download(ckpt_name, local_dir=ckpt_path)
 			ckpt_path = f"{ckpt_path}/checkpoints/Sana_600M_1024px.pth"
-		elif ckpt_name == 'Efficient-Large-Model/Sana_600M_512px':
-			ckpt_path = os.path.join(folder_paths.models_dir, 'sana', 'models--sana--sana-600m-512px')
-			model_conf = sana_conf['SanaMS_600M_P1_D28']
-			if not os.path.exists(os.path.join(ckpt_path, 'checkpoints/Sana_600M_512px.pth')):
+		elif ckpt_name == "Efficient-Large-Model/Sana_600M_512px":
+			ckpt_path = os.path.join(folder_paths.models_dir, "sana", "models--sana--sana-600m-512px")
+			model_conf = sana_conf["SanaMS_600M_P1_D28"]
+			if not os.path.exists(os.path.join(ckpt_path, "checkpoints/Sana_600M_512px.pth")):
 				snapshot_download(ckpt_name, local_dir=ckpt_path)
 			ckpt_path = f"{ckpt_path}/checkpoints/Sana_600M_512px.pth"
 		else:

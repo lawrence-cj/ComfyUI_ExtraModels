@@ -157,23 +157,25 @@ vae_conf = {
 		"attn_resolutions" : [32],
     },
     # DCAE configs
-    "dcae-f32c32-sana-1.0": {
-        "type"					: "DCAE",
-        "in_channels"			: 3,
-		"embed_scale"      		: 32,
-        "embed_dim"				: 32,
-        "encoder_block_type"	: ["ResBlock", "ResBlock", "ResBlock", "EViTS5GLU", "EViTS5GLU", "EViTS5GLU"],
-        "encoder_width_list"	: [128, 256, 512, 512, 1024, 1024],
-        "encoder_depth_list"	: [2, 2, 2, 3, 3, 3],
-        "encoder_norm"			: "rms2d",
-        "encoder_act"			: "silu",
-        "downsample_block_type"	: "Conv",
-        "decoder_block_type"	: ["ResBlock", "ResBlock", "ResBlock", "EViTS5GLU", "EViTS5GLU", "EViTS5GLU"],
-        "decoder_width_list"	: [128, 256, 512, 512, 1024, 1024],
-        "decoder_depth_list"	: [3, 3, 3, 3, 3, 3],
-        "decoder_norm"			: "rms2d", 
-        "decoder_act"			: "silu",
-        "upsample_block_type"	: "InterpolateConv",
-        "scaling_factor"		: 0.41407
-    }
+	"dcae-f32c32-sana-1.0-diffusers": {
+		"type"             			: "AutoencoderDC",
+		"embed_scale"				: 32,
+		"embed_dim"					: 32,
+		"attention_head_dim"		: 32,
+		"decoder_act_fns"			: "silu",
+		"decoder_block_out_channels": [128, 256, 512, 512, 1024, 1024],
+		"decoder_block_types"		: ["ResBlock", "ResBlock", "ResBlock", "EfficientViTBlock", "EfficientViTBlock", "EfficientViTBlock" ],
+		"decoder_layers_per_block"	: [3, 3, 3, 3, 3, 3 ],
+		"decoder_norm_types"		: "rms_norm",
+		"decoder_qkv_multiscales"	: [[], [], [], [5], [5], [5]],
+		"downsample_block_type"		: "Conv",
+		"encoder_block_out_channels": [128, 256, 512, 512, 1024, 1024],
+		"encoder_block_types"		: ["ResBlock", "ResBlock", "ResBlock", "EfficientViTBlock", "EfficientViTBlock", "EfficientViTBlock" ],
+		"encoder_layers_per_block"	: [2, 2, 2, 3, 3, 3],
+		"encoder_qkv_multiscales"	: [[], [], [], [5], [5], [5]],
+		"in_channels"				: 3,
+		"latent_channels"			: 32,
+		"scaling_factor"			: 0.41407,
+		"upsample_block_type"		: "interpolate"
+	}
 }
