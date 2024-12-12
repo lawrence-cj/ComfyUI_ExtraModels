@@ -33,7 +33,7 @@ class GemmaLoader:
             devices.append(f"cuda:{k}")
         return {
             "required": {
-                "model_name": (["google/gemma-2-2b-it", "unsloth/gemma-2-2b-it-bnb-4bit"],),
+                "model_name": (["Efficient-Large-Model/gemma-2-2b-it", "unsloth/gemma-2-2b-it-bnb-4bit"],),
                 "device": (devices, {"default":"cpu"}),
                 "dtype": (dtypes,),
             }
@@ -48,10 +48,10 @@ class GemmaLoader:
         if device == "cpu":
             assert dtype in [None, torch.float32], f"Can't use dtype '{dtype}' with CPU! Set dtype to 'default'."
 
-        if model_name == 'google/gemma-2-2b-it':
-            text_encoder_dir = os.path.join(folder_paths.models_dir, 'text_encoders', 'models--google--gemma-2-2b-it')
+        if model_name == 'Efficient-Large-Model/gemma-2-2b-it':
+            text_encoder_dir = os.path.join(folder_paths.models_dir, 'text_encoders', 'models-efficient-large-model--gemma-2-2b-it')
             if not os.path.exists(os.path.join(text_encoder_dir, 'model.safetensors')):
-                snapshot_download('google/gemma-2-2b-it', local_dir=text_encoder_dir)
+                snapshot_download('Efficient-Large-Model/gemma-2-2b-it', local_dir=text_encoder_dir)
         elif model_name == 'unsloth/gemma-2-2b-it-bnb-4bit':
             text_encoder_dir = os.path.join(folder_paths.models_dir, 'text_encoders', 'models--unsloth--gemma-2-2b-it-bnb-4bit')
             if not os.path.exists(os.path.join(text_encoder_dir, 'model.safetensors')):
