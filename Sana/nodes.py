@@ -222,32 +222,10 @@ preset_te_prompt = [
 	'User Prompt: '
 ]
 
-class SanaVAEPatchConv:
-	@classmethod
-	def INPUT_TYPES(s):
-		return {
-			"required": {
-				"vae": ("VAE",),
-			}
-		}
-	
-	RETURN_TYPES = ("VAE",)
-	RETURN_NAMES = ("vae",)
-	FUNCTION = "patch_conv"
-	CATEGORY = "ExtraModels/Sana"
-	TITLE = "Sana VAE Patch Conv"
-	
-	def patch_conv(self, vae):
-		from patch_conv import convert_model
-		vae = convert_model(vae, splits=32)
-		
-		return (vae,)
-
 NODE_CLASS_MAPPINGS = {
 	"SanaCheckpointLoader" : SanaCheckpointLoader,
 	"SanaResolutionSelect" : SanaResolutionSelect,
 	"SanaTextEncode" : SanaTextEncode,
 	"SanaResolutionCond" : SanaResolutionCond,
 	"EmptySanaLatentImage": EmptySanaLatentImage,
-	"SanaVAEPatchConv": SanaVAEPatchConv,
 }
