@@ -24,9 +24,12 @@ class ExtraVAELoader:
 		return {
 			"required": {
 				"vae_name": (
-					["mit-han-lab/dc-ae-f32c32-sana-1.0-diffusers"] + folder_paths.get_filename_list("vae"),
+					[
+						"mit-han-lab/dc-ae-f32c32-sana-1.0-diffusers",
+						"mit-han-lab/dc-ae-f32c32-sana-1.1-diffusers",
+					] + folder_paths.get_filename_list("vae"),
 				),
-				"vae_type": (list(vae_conf.keys()), {"default": "dcae-f32c32-sana-1.0-diffusers"}),
+				"vae_type": (list(vae_conf.keys()), {"default": "dcae-f32c32-sana-1.1-diffusers"}),
 				"dtype"   : (dtypes, {"default": "BF16"}),
 			}
 		}
@@ -38,6 +41,12 @@ class ExtraVAELoader:
 	def load_vae(self, vae_name, vae_type, dtype):
 		if vae_name == "mit-han-lab/dc-ae-f32c32-sana-1.0-diffusers":
 			model_path = os.path.join(folder_paths.models_dir, "vae", "models--mit-han-lab--dc-ae-f32c32-sana-1.0-diffusers")
+			if not os.path.exists(os.path.join(model_path, "diffusion_pytorch_model.safetensors")):
+				snapshot_download(vae_name, local_dir=model_path)
+			model_path = f"{model_path}/diffusion_pytorch_model.safetensors"
+			model_conf = vae_conf["dcae-f32c32-sana-1.0-diffusers"]
+		elif vae_name == "mit-han-lab/dc-ae-f32c32-sana-1.1-diffusers":
+			model_path = os.path.join(folder_paths.models_dir, "vae", "models--mit-han-lab--dc-ae-f32c32-sana-1.1-diffusers")
 			if not os.path.exists(os.path.join(model_path, "diffusion_pytorch_model.safetensors")):
 				snapshot_download(vae_name, local_dir=model_path)
 			model_path = f"{model_path}/diffusion_pytorch_model.safetensors"
