@@ -8,6 +8,8 @@ from .loader import load_sana
 from ..utils.dtype import string_to_dtype
 from nodes import EmptyLatentImage
 
+from .sana_cfg_passthrough import enable_sana_cfg
+
 if not "sana" in folder_paths.folder_names_and_paths:
     folder_paths.add_model_folder_path("sana", os.path.join(folder_paths.models_dir, "Sana"))
 
@@ -43,6 +45,7 @@ class SanaCheckpointLoader:
 				),
 				"model": (list(sana_conf.keys()), {"default":"SanaMS_1600M_P1_D20"}),
 				"dtype": (dtypes,),
+				"enable_cfg_passthrough": ("BOOLEAN", {"default": True, "tooltip": "Enable CFG scale passthrough to model forward method"}),
 			}
 		}
 	RETURN_TYPES = ("MODEL",)
@@ -51,7 +54,7 @@ class SanaCheckpointLoader:
 	CATEGORY = "ExtraModels/Sana"
 	TITLE = "Sana Checkpoint Loader"
 
-	def load_checkpoint(self, ckpt_name, model, dtype):
+	def load_checkpoint(self, ckpt_name, model, dtype, enable_cfg_passthrough=True):
 		dtype = string_to_dtype(dtype, "unet")
 		if ckpt_name == "Efficient-Large-Model/Sana_Sprint_1.6B_1024px":
 			ckpt_path = os.path.join(folder_paths.models_dir, "sana", "models--sana--sana-sprint-1600m-1024px")
@@ -140,6 +143,12 @@ class SanaCheckpointLoader:
 			model_conf = model_conf,
 			dtype = dtype,
 		)
+		
+		# Enable CFG passthrough functionality
+		if enable_cfg_passthrough:
+			model = enable_sana_cfg(model)
+			print("CFG passthrough enabled - KSampler CFG scale will be automatically passed to model")
+		
 		return (model,)
 
 

@@ -252,12 +252,6 @@ class SanaMS(Sana):
         self.initialize()
 
     def forward(self, x, timesteps, context, **kwargs):
-        """
-        Forward pass that adapts comfy input to original forward function
-        x: (N, C, H, W) tensor of spatial inputs (images or latent representations of images)
-        timesteps: (N,) tensor of diffusion timesteps
-        context: (N, 1, 120, C) conditioning
-        """
         ## size/ar from cond with fallback based on the latent image shape.
         bs = x.shape[0]
         ## Still accepts the input w/o that dim but returns garbage
@@ -269,6 +263,7 @@ class SanaMS(Sana):
             x = x.to(self.dtype),
             timestep = timesteps.to(self.dtype),
             y = context.to(self.dtype),
+            **kwargs
         )
 
         ## only return EPS
@@ -276,7 +271,7 @@ class SanaMS(Sana):
         
         return out
 
-    def forward_raw(self, x, timestep, y, mask=None, data_info=None, **kwargs):
+    def forward_raw(self, x, timestep, y, mask=None, **kwargs):
         """
         Forward pass of Sana.
         x: (N, C, H, W) tensor of spatial inputs (images or latent representations of images)
@@ -313,7 +308,8 @@ class SanaMS(Sana):
 
         t = self.t_embedder(timestep)  # (N, D)
         if self.cfg_embedder:
-            cfg_embed = self.cfg_embedder(data_info["cfg_scale"] * self.cfg_embed_scale)
+            cfg_scale = torch.tensor(kwargs["cfg_scale"], dtype=torch.float32, device=x.device).repeat(bs)
+            cfg_embed = self.cfg_embedder(cfg_scale * self.cfg_embed_scale)
             t += cfg_embed
 
         y_lens = ((y != 0).sum(dim=3) > 0).sum(dim=2).squeeze()
@@ -394,7 +390,7 @@ class SanaMS(Sana):
 
 
 class SanaMSCM(SanaMS):
-    def forward_raw(self, x, timestep, y, data_info=None, **kwargs):
+    def forward_raw(self, x, timestep, y, **kwargs):
 
         # TrigFlow --> Flow Transformation
         # the input now is [0, np.pi/2], arctan(N(P_mean, P_std))
@@ -406,7 +402,7 @@ class SanaMSCM(SanaMS):
         x = x * torch.sqrt(t**2 + (1 - t) ** 2)
 
         # forward in original flow
-        model_out = super().forward_raw(x, pretrain_timestep, y, data_info=data_info, **kwargs)
+        model_out = super().forward_raw(x, pretrain_timestep, y, **kwargs)
 
         # Flow --> TrigFlow Transformation
         trigflow_model_out = ((1 - 2 * t) * x + (1 - 2 * t + 2 * t**2) * model_out) / torch.sqrt(

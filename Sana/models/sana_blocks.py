@@ -172,11 +172,39 @@ class MultiHeadCrossVallinaAttention(MultiHeadCrossAttention):
 
         # vanilla attention
         q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
-        if mask is not None and mask.ndim == 2:
-            mask = (1 - mask.to(q.dtype)) * -10000.0
-            mask = mask[:, None, None].repeat(1, self.num_heads, 1, 1)
+        
+        attn_mask = None
+        if mask is not None and len(mask) > 1:
+            # Create equivalent of xformer diagonal block mask, still only correct for square masks
+            # But depth doesn't matter as tensors can expand in that dimension
+            attn_mask_template = torch.ones(
+                [q.shape[2] // B, mask[0]],
+                dtype=torch.bool,
+                device=q.device
+            )
+            attn_mask = torch.block_diag(attn_mask_template)
 
-        x = self.scaled_dot_product_attention(q, k, v, attn_mask=mask, dropout_p=0.0, is_causal=False)
+            # create a mask on the diagonal for each mask in the batch
+            for n in range(B - 1):
+                attn_mask = torch.block_diag(attn_mask, attn_mask_template)
+        elif mask is not None and len(mask) == 1:
+            # Handle single mask length case - all batches use the same mask length
+            attn_mask_template = torch.ones(
+                [q.shape[2] // B, mask[0]],
+                dtype=torch.bool,
+                device=q.device
+            )
+            attn_mask = torch.block_diag(attn_mask_template)
+
+            # create a mask on the diagonal for each mask in the batch (all same length)
+            for n in range(B - 1):
+                attn_mask = torch.block_diag(attn_mask, attn_mask_template)
+        elif mask is not None and mask.ndim == 2:
+            # Handle 2D mask case (original logic)
+            mask = (1 - mask.to(q.dtype)) * -10000.0
+            attn_mask = mask[:, None, None].repeat(1, self.num_heads, 1, 1)
+
+        x = self.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask, dropout_p=0.0, is_causal=False)
         x = x.to(dtype)
         x = x.transpose(1, 2).contiguous()
 
