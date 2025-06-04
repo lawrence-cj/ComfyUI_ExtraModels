@@ -308,7 +308,9 @@ class SanaMS(Sana):
 
         t = self.t_embedder(timestep)  # (N, D)
         if self.cfg_embedder:
-            cfg_scale = torch.tensor(kwargs["cfg_scale"], dtype=torch.float32, device=x.device).repeat(bs)
+            # Get cfg_scale from transformer_options
+            cfg_scale = kwargs.get("transformer_options", {}).get("cfg_scale", 4.5)
+            cfg_scale = torch.tensor(cfg_scale, dtype=torch.float32, device=x.device).repeat(bs)
             cfg_embed = self.cfg_embedder(cfg_scale * self.cfg_embed_scale)
             t += cfg_embed
 
