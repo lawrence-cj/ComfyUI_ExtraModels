@@ -32,12 +32,13 @@ def sample_scm(model, x, sigmas, extra_args=None, callback=None, disable=None, n
     
     print(f"SCM timesteps: {timesteps}")
     
-    latents = x
+    latents = x * sigma_data
     denoised = None
+    extra_args["model_options"]["cfg_scale"] = 4.5
     
     # SCM MultiStep Sampling Loop
     for i, t in enumerate(timesteps[:-1]):
-        timestep = t.expand(latents.shape[0])  # 扩展到 [batch_size]
+        timestep = t.expand(latents.shape[0])
         
         model_pred = sigma_data * model(
             latents / sigma_data,
@@ -48,32 +49,27 @@ def sample_scm(model, x, sigmas, extra_args=None, callback=None, disable=None, n
         if callback is not None:
             callback({'x': latents, 'i': i, 'sigma': t, 'sigma_hat': t, 'denoised': model_pred})
 
-        # SCM step: compute the previous noisy sample x_t -> x_t-1
-        # 这里使用SCM的trigflow公式
         s = t
         next_t = timesteps[i + 1] if i + 1 < len(timesteps) else torch.tensor(0.0, device=t.device)
         
-        # SCM denoising: pred_x0 = cos(s) * x - sin(s) * model_output
         denoised = torch.cos(s) * latents - torch.sin(s) * model_pred
         
-        # 下一步: x = cos(t) * pred_x0 + sin(t) * noise
-        if next_t > 0:  # 如果不是最后一步
-            noise = noise_sampler(s, next_t)
+        if next_t > 0:
+            noise = noise_sampler(s, next_t) * sigma_data
             latents = torch.cos(next_t) * denoised + torch.sin(next_t) * noise
         else:
             latents = denoised
     
-    # 返回最终的denoised结果（按照你的逻辑：denoised / sigma_data）
-    # 但这里sigma_data会在ComfyUI的后处理中处理，所以直接返回denoised
     denoised = denoised / sigma_data
 
     return denoised if denoised is not None else latents
 
 
-# SCM模型采样类 - 基于ComfyUI的LCM类改写
 class SCM(comfy.model_sampling.EPS):
     """SCM Model Sampling class"""
-    
+    def calculate_input(self, sigma, noise):
+        return noise
+
     def calculate_denoised(self, sigma, model_output, model_input):
         
         return model_output

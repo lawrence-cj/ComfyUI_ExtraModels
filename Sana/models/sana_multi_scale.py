@@ -260,7 +260,7 @@ class SanaMS(Sana):
 
         ## run original forward pass
         out = self.forward_raw(
-            x = x.to(self.dtype),
+            x = x.to(torch.float32),
             timestep = timesteps.to(torch.float32),
             y = context.to(self.dtype),
             **kwargs

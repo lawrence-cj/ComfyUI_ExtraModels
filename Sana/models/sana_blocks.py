@@ -185,7 +185,7 @@ class MultiHeadCrossVallinaAttention(MultiHeadCrossAttention):
             attn_mask = torch.block_diag(attn_mask_template)
 
             # create a mask on the diagonal for each mask in the batch
-            for n in range(B - 1):
+            for _ in range(B - 1):
                 attn_mask = torch.block_diag(attn_mask, attn_mask_template)
         elif mask is not None and len(mask) == 1:
             # Handle single mask length case - all batches use the same mask length
@@ -197,7 +197,7 @@ class MultiHeadCrossVallinaAttention(MultiHeadCrossAttention):
             attn_mask = torch.block_diag(attn_mask_template)
 
             # create a mask on the diagonal for each mask in the batch (all same length)
-            for n in range(B - 1):
+            for _ in range(B - 1):
                 attn_mask = torch.block_diag(attn_mask, attn_mask_template)
         elif mask is not None and mask.ndim == 2:
             # Handle 2D mask case (original logic)
