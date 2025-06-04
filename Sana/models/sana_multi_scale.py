@@ -27,6 +27,7 @@ from .sana_blocks import (
     FlashAttention,
     LiteLA,
     MultiHeadCrossAttention,
+    MultiHeadCrossVallinaAttention,
     PatchEmbedMS,
     T2IFinalLayer,
     t2i_modulate,
@@ -45,13 +46,13 @@ class SanaMSBlock(nn.Module):
         num_heads,
         mlp_ratio=4.0,
         drop_path=0.0,
-        input_size=None,
         qk_norm=False,
         attn_type="flash",
         ffn_type="mlp",
         mlp_acts=("silu", "silu", None),
         linear_head_dim=32,
         cross_norm=False,
+        cross_attn_type="flash",
         **block_kwargs,
     ):
         super().__init__()
@@ -77,7 +78,13 @@ class SanaMSBlock(nn.Module):
         else:
             raise ValueError(f"{attn_type} type is not defined.")
 
-        self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads, qk_norm=cross_norm, **block_kwargs)
+        if cross_attn_type == "flash":
+            self.cross_attn = MultiHeadCrossAttention(hidden_size, num_heads, qk_norm=cross_norm, **block_kwargs)
+        elif cross_attn_type == "vanilla":
+            self.cross_attn = MultiHeadCrossVallinaAttention(hidden_size, num_heads, qk_norm=cross_norm, **block_kwargs)
+        else:
+            raise ValueError(f"{cross_attn_type} type is not defined.")
+
         self.norm2 = nn.LayerNorm(hidden_size, elementwise_affine=False, eps=1e-6)
         if ffn_type == "dwmlp":
             approx_gelu = lambda: nn.GELU(approximate="tanh")
@@ -169,6 +176,10 @@ class SanaMS(Sana):
         mlp_acts=("silu", "silu", None),
         linear_head_dim=32,
         cross_norm=False,
+        cross_attn_type="flash",
+        cfg_embed=False,
+        cfg_embed_scale=1.0,
+        timestep_norm_scale_factor=1.0,
         **kwargs,
     ):
         super().__init__(
@@ -197,6 +208,8 @@ class SanaMS(Sana):
             patch_embed_kernel=patch_embed_kernel,
             mlp_acts=mlp_acts,
             linear_head_dim=linear_head_dim,
+            cfg_embed=cfg_embed,
+            timestep_norm_scale_factor=timestep_norm_scale_factor,
             **kwargs,
         )
         self.dtype = torch.get_default_dtype()
@@ -204,6 +217,7 @@ class SanaMS(Sana):
         approx_gelu = lambda: nn.GELU(approximate="tanh")
         self.t_block = nn.Sequential(nn.SiLU(), nn.Linear(hidden_size, 6 * hidden_size, bias=True))
         self.pos_embed_ms = None
+        self.cfg_embed_scale = cfg_embed_scale
 
         kernel_size = patch_embed_kernel or patch_size
         self.x_embedder = PatchEmbedMS(patch_size, in_channels, hidden_size, kernel_size=kernel_size, bias=True)
@@ -222,13 +236,13 @@ class SanaMS(Sana):
                     num_heads,
                     mlp_ratio=mlp_ratio,
                     drop_path=drop_path[i],
-                    input_size=(input_size // patch_size, input_size // patch_size),
                     qk_norm=qk_norm,
                     attn_type=attn_type,
                     ffn_type=ffn_type,
                     mlp_acts=mlp_acts,
                     linear_head_dim=linear_head_dim,
                     cross_norm=cross_norm,
+                    cross_attn_type=cross_attn_type,
                 )
                 for i in range(depth)
             ]
@@ -238,12 +252,6 @@ class SanaMS(Sana):
         self.initialize()
 
     def forward(self, x, timesteps, context, **kwargs):
-        """
-        Forward pass that adapts comfy input to original forward function
-        x: (N, C, H, W) tensor of spatial inputs (images or latent representations of images)
-        timesteps: (N,) tensor of diffusion timesteps
-        context: (N, 1, 120, C) conditioning
-        """
         ## size/ar from cond with fallback based on the latent image shape.
         bs = x.shape[0]
         ## Still accepts the input w/o that dim but returns garbage
@@ -252,9 +260,10 @@ class SanaMS(Sana):
 
         ## run original forward pass
         out = self.forward_raw(
-            x = x.to(self.dtype),
-            timestep = timesteps.to(self.dtype),
+            x = x.to(torch.float32),
+            timestep = timesteps.to(torch.float32),
             y = context.to(self.dtype),
+            **kwargs
         )
 
         ## only return EPS
@@ -262,7 +271,7 @@ class SanaMS(Sana):
         
         return out
 
-    def forward_raw(self, x, timestep, y, mask=None, data_info=None, **kwargs):
+    def forward_raw(self, x, timestep, y, mask=None, **kwargs):
         """
         Forward pass of Sana.
         x: (N, C, H, W) tensor of spatial inputs (images or latent representations of images)
@@ -271,7 +280,10 @@ class SanaMS(Sana):
         """
         bs = x.shape[0]
         x = x.to(self.dtype)
-        timestep = timestep.to(self.dtype)
+        if self.timestep_norm_scale_factor != 1.0:
+            timestep = (timestep.float() / self.timestep_norm_scale_factor).to(torch.float32)
+        else:
+            timestep = timestep.long().to(torch.float32)
         y = y.to(self.dtype)
         self.h, self.w = x.shape[-2] // self.patch_size, x.shape[-1] // self.patch_size
         if self.use_pe:
@@ -295,6 +307,12 @@ class SanaMS(Sana):
             x = self.x_embedder(x)
 
         t = self.t_embedder(timestep)  # (N, D)
+        if self.cfg_embedder:
+            # Get cfg_scale from transformer_options
+            cfg_scale = kwargs.get("transformer_options", {}).get("cfg_scale", 4.5)
+            cfg_scale = torch.tensor(cfg_scale, dtype=torch.float32, device=x.device).repeat(bs)
+            cfg_embed = self.cfg_embedder(cfg_scale * self.cfg_embed_scale)
+            t += cfg_embed
 
         y_lens = ((y != 0).sum(dim=3) > 0).sum(dim=2).squeeze()
         y_lens = [y_lens.item() if torch.is_tensor(y_lens) and y_lens.numel() == 1 else y_lens[1]] * bs
@@ -371,3 +389,25 @@ class SanaMS(Sana):
         # Initialize caption embedding MLP:
         nn.init.normal_(self.y_embedder.y_proj.fc1.weight, std=0.02)
         nn.init.normal_(self.y_embedder.y_proj.fc2.weight, std=0.02)
+
+
+class SanaMSCM(SanaMS):
+    def forward_raw(self, x, timestep, y, **kwargs):
+
+        # TrigFlow --> Flow Transformation
+        # the input now is [0, np.pi/2], arctan(N(P_mean, P_std))
+        t = torch.sin(timestep) / (torch.cos(timestep) + torch.sin(timestep))
+
+        pretrain_timestep = t * 1000  # stabilize large resolution training
+        t = t.view(-1, 1, 1, 1)
+
+        x = x * torch.sqrt(t**2 + (1 - t) ** 2)
+
+        # forward in original flow
+        model_out = super().forward_raw(x, pretrain_timestep, y, **kwargs)
+
+        # Flow --> TrigFlow Transformation
+        trigflow_model_out = ((1 - 2 * t) * x + (1 - 2 * t + 2 * t**2) * model_out) / torch.sqrt(
+            t**2 + (1 - t) ** 2
+        )
+        return trigflow_model_out

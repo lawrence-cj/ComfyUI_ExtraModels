@@ -84,6 +84,9 @@ def load_sana(model_path, model_conf, dtype):
 	if model_conf.model_target == "SanaMS":
 		from .models.sana_multi_scale import SanaMS
 		model.diffusion_model = SanaMS(**model_conf.unet_config)
+	elif model_conf.model_target == "SanaMSCM":
+		from .models.sana_multi_scale import SanaMSCM
+		model.diffusion_model = SanaMSCM(**model_conf.unet_config)
 	else:
 		raise NotImplementedError(f"Unknown model target '{model_conf.model_target}'")
 

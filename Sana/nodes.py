@@ -8,6 +8,10 @@ from .loader import load_sana
 from ..utils.dtype import string_to_dtype
 from nodes import EmptyLatentImage
 
+from .sana_cfg_passthrough import enable_sana_cfg
+# Import SCM sampler components
+from .scm_sampler import ScmModelSampling
+
 if not "sana" in folder_paths.folder_names_and_paths:
     folder_paths.add_model_folder_path("sana", os.path.join(folder_paths.models_dir, "Sana"))
 
@@ -26,6 +30,8 @@ class SanaCheckpointLoader:
 			"required": {
 				"ckpt_name": (
 					[
+						"Efficient-Large-Model/Sana_Sprint_0.6B_1024px",
+						"Efficient-Large-Model/Sana_Sprint_1.6B_1024px",
 						"Efficient-Large-Model/SANA1.5_1.6B_1024px",
 						"Efficient-Large-Model/SANA1.5_4.8B_1024px",
 						"Efficient-Large-Model/Sana_1600M_1024px_MultiLing",
@@ -41,6 +47,7 @@ class SanaCheckpointLoader:
 				),
 				"model": (list(sana_conf.keys()), {"default":"SanaMS_1600M_P1_D20"}),
 				"dtype": (dtypes,),
+				"enable_cfg_passthrough": ("BOOLEAN", {"default": True, "tooltip": "Enable CFG scale passthrough to model forward method"}),
 			}
 		}
 	RETURN_TYPES = ("MODEL",)
@@ -49,9 +56,21 @@ class SanaCheckpointLoader:
 	CATEGORY = "ExtraModels/Sana"
 	TITLE = "Sana Checkpoint Loader"
 
-	def load_checkpoint(self, ckpt_name, model, dtype):
+	def load_checkpoint(self, ckpt_name, model, dtype, enable_cfg_passthrough=True):
 		dtype = string_to_dtype(dtype, "unet")
-		if ckpt_name == "Efficient-Large-Model/SANA1.5_4.8B_1024px":
+		if ckpt_name == "Efficient-Large-Model/Sana_Sprint_1.6B_1024px":
+			ckpt_path = os.path.join(folder_paths.models_dir, "sana", "models--sana--sana-sprint-1600m-1024px")
+			model_conf = sana_conf['SanaSprint_1600M_P1_D20']
+			if not os.path.exists(os.path.join(ckpt_path, "checkpoints/Sana_Sprint_1.6B_1024px.pth")):
+				snapshot_download(ckpt_name, local_dir=ckpt_path)
+			ckpt_path = f"{ckpt_path}/checkpoints/Sana_Sprint_1.6B_1024px.pth"
+		elif ckpt_name == "Efficient-Large-Model/Sana_Sprint_0.6B_1024px":
+			ckpt_path = os.path.join(folder_paths.models_dir, "sana", "models--sana--sana-sprint-600m-1024px")
+			model_conf = sana_conf['SanaSprint_600M_P1_D28']
+			if not os.path.exists(os.path.join(ckpt_path, "checkpoints/Sana_Sprint_0.6B_1024px.pth")):
+				snapshot_download(ckpt_name, local_dir=ckpt_path)
+			ckpt_path = f"{ckpt_path}/checkpoints/Sana_Sprint_0.6B_1024px.pth"
+		elif ckpt_name == "Efficient-Large-Model/SANA1.5_4.8B_1024px":
 			ckpt_path = os.path.join(folder_paths.models_dir, "sana", "models--sana--sana-1.5-4800m-1024px")
 			model_conf = sana_conf['SanaMS1.5_4800M_P1_D60']
 			if not os.path.exists(os.path.join(ckpt_path, "checkpoints/SANA1.5_4.8B_1024px.pth")):
@@ -126,6 +145,12 @@ class SanaCheckpointLoader:
 			model_conf = model_conf,
 			dtype = dtype,
 		)
+		
+		# Enable CFG passthrough functionality
+		if enable_cfg_passthrough:
+			model = enable_sana_cfg(model)
+			print("CFG passthrough enabled - KSampler CFG scale will be automatically passed to model")
+		
 		return (model,)
 
 
@@ -241,4 +266,6 @@ NODE_CLASS_MAPPINGS = {
 	"SanaTextEncode" : SanaTextEncode,
 	"SanaResolutionCond" : SanaResolutionCond,
 	"EmptySanaLatentImage": EmptySanaLatentImage,
+	# SCM Sampler nodes
+	"ScmModelSampling": ScmModelSampling,
 }

@@ -135,6 +135,85 @@ class MultiHeadCrossAttention(nn.Module):
         return x
 
 
+class MultiHeadCrossVallinaAttention(MultiHeadCrossAttention):
+    @staticmethod
+    def scaled_dot_product_attention(
+        query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, scale=None
+    ) -> torch.Tensor:
+        B, H, L, S = *query.size()[:-1], key.size(-2)
+        scale_factor = 1 / math.sqrt(query.size(-1)) if scale is None else scale
+        attn_bias = torch.zeros(B, H, L, S, dtype=query.dtype, device=query.device)
+
+        if attn_mask is not None:
+            if attn_mask.dtype == torch.bool:
+                attn_bias.masked_fill_(attn_mask.logical_not(), float("-inf"))
+            else:
+                attn_bias += attn_mask
+        attn_weight = query @ key.transpose(-2, -1) * scale_factor
+        attn_weight += attn_bias
+        attn_weight = torch.softmax(attn_weight, dim=-1)
+        attn_weight = torch.dropout(attn_weight, dropout_p, train=True)
+        return attn_weight @ value
+
+    def forward(self, x, cond, mask=None):
+        # query: img tokens; key/value: condition; mask: if padding tokens
+        B, N, C = x.shape
+
+        q = self.q_linear(x)
+        kv = self.kv_linear(cond).view(B, -1, 2, C)
+        k, v = kv.unbind(2)
+        q = self.q_norm(q).view(B, -1, self.num_heads, self.head_dim)
+        k = self.k_norm(k).view(B, -1, self.num_heads, self.head_dim)
+        v = v.view(B, -1, self.num_heads, self.head_dim)
+
+        # Cast for sCM
+        dtype = q.dtype
+        q, k, v = q.float(), k.float(), v.float()
+
+        # vanilla attention
+        q, k, v = q.transpose(1, 2), k.transpose(1, 2), v.transpose(1, 2)
+        
+        attn_mask = None
+        if mask is not None and len(mask) > 1:
+            # Create equivalent of xformer diagonal block mask, still only correct for square masks
+            # But depth doesn't matter as tensors can expand in that dimension
+            attn_mask_template = torch.ones(
+                [q.shape[2] // B, mask[0]],
+                dtype=torch.bool,
+                device=q.device
+            )
+            attn_mask = torch.block_diag(attn_mask_template)
+
+            # create a mask on the diagonal for each mask in the batch
+            for _ in range(B - 1):
+                attn_mask = torch.block_diag(attn_mask, attn_mask_template)
+        elif mask is not None and len(mask) == 1:
+            # Handle single mask length case - all batches use the same mask length
+            attn_mask_template = torch.ones(
+                [q.shape[2] // B, mask[0]],
+                dtype=torch.bool,
+                device=q.device
+            )
+            attn_mask = torch.block_diag(attn_mask_template)
+
+            # create a mask on the diagonal for each mask in the batch (all same length)
+            for _ in range(B - 1):
+                attn_mask = torch.block_diag(attn_mask, attn_mask_template)
+        elif mask is not None and mask.ndim == 2:
+            # Handle 2D mask case (original logic)
+            mask = (1 - mask.to(q.dtype)) * -10000.0
+            attn_mask = mask[:, None, None].repeat(1, self.num_heads, 1, 1)
+
+        x = self.scaled_dot_product_attention(q, k, v, attn_mask=attn_mask, dropout_p=0.0, is_causal=False)
+        x = x.to(dtype)
+        x = x.transpose(1, 2).contiguous()
+
+        x = x.view(B, -1, C)
+        x = self.proj(x)
+        x = self.proj_drop(x)
+
+        return x
+
 class LiteLA(Attention_):
     r"""Lightweight linear attention"""
 

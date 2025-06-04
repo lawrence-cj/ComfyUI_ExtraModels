@@ -170,6 +170,8 @@ class Sana(nn.Module):
         patch_embed_kernel=None,
         mlp_acts=("silu", "silu", None),
         linear_head_dim=32,
+        cfg_embed=False,
+        timestep_norm_scale_factor=1.0,
         **kwargs,
     ):
         super().__init__()
@@ -184,12 +186,16 @@ class Sana(nn.Module):
         self.y_norm = y_norm
         self.model_max_length = model_max_length
         self.fp32_attention = kwargs.get("use_fp32_attention", False)
+        self.timestep_norm_scale_factor = timestep_norm_scale_factor
 
         kernel_size = patch_embed_kernel or patch_size
         self.x_embedder = PatchEmbed(
             input_size, patch_size, in_channels, hidden_size, kernel_size=kernel_size, bias=True
         )
         self.t_embedder = TimestepEmbedder(hidden_size)
+        self.cfg_embedder = None
+        if cfg_embed:
+            self.cfg_embedder = TimestepEmbedder(hidden_size)
         num_patches = self.x_embedder.num_patches
         self.base_size = input_size // self.patch_size
         # Will use fixed sin-cos embedding:
