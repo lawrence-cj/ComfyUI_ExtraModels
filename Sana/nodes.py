@@ -9,6 +9,8 @@ from ..utils.dtype import string_to_dtype
 from nodes import EmptyLatentImage
 
 from .sana_cfg_passthrough import enable_sana_cfg
+# Import SCM sampler components
+from .scm_sampler import ScmModelSampling
 
 if not "sana" in folder_paths.folder_names_and_paths:
     folder_paths.add_model_folder_path("sana", os.path.join(folder_paths.models_dir, "Sana"))
@@ -264,4 +266,6 @@ NODE_CLASS_MAPPINGS = {
 	"SanaTextEncode" : SanaTextEncode,
 	"SanaResolutionCond" : SanaResolutionCond,
 	"EmptySanaLatentImage": EmptySanaLatentImage,
+	# SCM Sampler nodes
+	"ScmModelSampling": ScmModelSampling,
 }
