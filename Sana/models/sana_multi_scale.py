@@ -284,6 +284,7 @@ class SanaMS(Sana):
             timestep = (timestep.float() / self.timestep_norm_scale_factor).to(torch.float32)
         else:
             timestep = timestep.long().to(torch.float32)
+        timestep = timestep.to(x.device)
         y = y.to(self.dtype)
         self.h, self.w = x.shape[-2] // self.patch_size, x.shape[-1] // self.patch_size
         if self.use_pe:
